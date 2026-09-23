@@ -281,62 +281,42 @@ export default function POS({ products, setProducts }) {
                 </div>
               </div>
 
-              {/* ── DPDP Consent Block ── */}
-              <div className="dpdp-notice">
-                <div className="dpdp-notice-header">
-                  <div className="dpdp-shield">🛡️</div>
-                  <div>
-                    <h4 className="dpdp-title">Data Collection Notice</h4>
-                    <p className="dpdp-act-tag">Static demo</p>
-                  </div>
-                </div>
-                <p className="dpdp-body">
-                  Optional customer details are used only for this demo sale. They stay in memory
-                  and are cleared when you refresh the page.
-                </p>
-                <label className="dpdp-consent-row">
+              <div className="billing-customer-fields">
+                <div className="input-group">
+                  <label htmlFor="customer-name">Customer Name</label>
                   <input
+                    id="customer-name"
+                    type="text"
+                    className="input"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div className="input-group">
+                  <label htmlFor="customer-phone">Mobile Number</label>
+                  <input
+                    id="customer-phone"
+                    type="tel"
+                    className="input"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    maxLength={10}
+                  />
+                </div>
+                <label className="dpdp-consent-row" htmlFor="billing-consent" style={{ marginBottom: '1rem' }}>
+                  <input
+                    id="billing-consent"
+                    name="billing-consent"
                     type="checkbox"
                     className="dpdp-checkbox"
                     checked={dpdpConsent}
-                    onChange={e => {
-                      setDpdpConsent(e.target.checked);
-                      if (!e.target.checked) { setCustomerName(''); setCustomerPhone(''); }
-                    }}
+                    onChange={e => setDpdpConsent(e.target.checked)}
                   />
-                  <span>I voluntarily consent to share my personal data for billing purposes</span>
+                  <span>I consent to share my name and mobile number for billing purposes.</span>
                 </label>
-                {!dpdpConsent && (
-                  <p className="dpdp-skip-note">⚡ You may also proceed without sharing personal data</p>
-                )}
               </div>
-
-              {/* Customer Fields — only after consent */}
-              {dpdpConsent && (
-                <div className="billing-customer-fields">
-                  <div className="input-group">
-                    <label>Customer Name</label>
-                    <input
-                      type="text"
-                      className="input"
-                      value={customerName}
-                      onChange={e => setCustomerName(e.target.value)}
-                      placeholder="Enter full name"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Mobile Number</label>
-                    <input
-                      type="tel"
-                      className="input"
-                      value={customerPhone}
-                      onChange={e => setCustomerPhone(e.target.value)}
-                      placeholder="10-digit mobile number"
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Payment Method */}
               <div style={{ marginBottom: '1rem' }}>
