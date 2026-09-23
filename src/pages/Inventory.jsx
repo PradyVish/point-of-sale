@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import { filterProducts } from '../data/products';
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 
-export default function Inventory() {
-  const [products, setProducts] = useState([]);
+export default function Inventory({ products, setProducts }) {
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -17,40 +15,35 @@ export default function Inventory() {
   });
   const [editingId, setEditingId] = useState(null);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`http://localhost:5000/api/products?search=${search}&limit=100`);
-      setProducts(res.data.products);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredProducts = filterProducts(products, search);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await axios.put(`http://localhost:5000/api/products/${editingId}`, formData);
-      } else {
-        await axios.post('http://localhost:5000/api/products', formData);
-      }
-      setShowForm(false);
-      setFormData({ name: '', category: '', price: '', stock: '', sku: '' });
-      setEditingId(null);
-      fetchProducts();
-    } catch (err) {
-      alert("Error saving product: " + err.message);
+    const product = {
+      ...formData,
+      name: formData.name.trim(),
+      category: formData.category.trim(),
+      sku: formData.sku.trim(),
+      price: Number(formData.price),
+      stock: Number(formData.stock),
+      _id: editingId || crypto.randomUUID(),
+    };
+    if (!product.name || !product.category || !product.sku ||
+        !Number.isFinite(product.price) || product.price < 0 ||
+        !Number.isInteger(product.stock) || product.stock < 0) {
+      alert('Enter valid product details, a non-negative price and whole stock quantity.');
+      return;
     }
+    if (products.some(item => item._id !== editingId && item.sku.toLowerCase() === product.sku.toLowerCase())) {
+      alert('A product with this SKU already exists.');
+      return;
+    }
+    setProducts(current => editingId
+      ? current.map(item => item._id === editingId ? product : item)
+      : [...current, product]);
+    setShowForm(false);
+    setFormData({ name: '', category: '', price: '', stock: '', sku: '' });
+    setEditingId(null);
   };
 
   const handleEdit = (product) => {
@@ -65,14 +58,9 @@ export default function Inventory() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (confirm("Are you sure you want to delete this product?")) {
-      try {
-        await axios.delete(`http://localhost:5000/api/products/${id}`);
-        fetchProducts();
-      } catch (err) {
-        alert("Error deleting product");
-      }
+      setProducts(current => current.filter(product => product._id !== id));
     }
   };
 
@@ -116,9 +104,10 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</td></tr>
-              ) : products.map(p => (
+              {filteredProducts.length === 0 && (
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>No products found.</td></tr>
+              )}
+              {filteredProducts.map(p => (
                 <tr key={p._id}>
                   <td><span className="badge" style={{ background: 'rgba(255,255,255,0.1)' }}>{p.sku}</span></td>
                   <td className="font-medium">{p.name}</td>
@@ -164,11 +153,11 @@ export default function Inventory() {
               <div className="flex gap-4">
                 <div className="input-group w-full">
                   <label>Price (₹)</label>
-                  <input required type="number" step="0.01" className="input" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+                  <input required type="number" min="0" step="0.01" className="input" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
                 </div>
                 <div className="input-group w-full">
                   <label>Stock Quantity</label>
-                  <input required type="number" className="input" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} />
+                  <input required type="number" min="0" step="1" className="input" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} />
                 </div>
               </div>
               <div className="flex justify-end gap-4 mt-6">

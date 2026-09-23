@@ -1,26 +1,34 @@
-# React + Vite
+# QuickPOS static demo
+
+A React + Vite point-of-sale demo using sample data bundled in
+`src/data/products.js`. No API server, database, or backend configuration is required.
 
 ## Local setup
 
-Use Node.js 24.14.1 (recorded in the root `.nvmrc`). With nvm-windows, run
-`nvm use 24.14.1`, then run `npm ci` and `npm run dev` from this directory.
-If that Node version is missing, run `nvm install 24.14.1` first.
+Use Node.js 24 (or a version matching `package.json`), then run:
 
-Node 16 cannot run this project's Vite version and causes
-`crypto$2.getRandomValues is not a function`. Check `node --version` in the
-terminal running Vite after switching versions.
+```sh
+npm ci
+npm run dev
+```
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Demo behavior
 
-Currently, two official plugins are available:
+- POS and Inventory share the sample catalog. Search and category filters run locally.
+- Inventory edits and simulated sales update in-memory data across pages.
+- Refreshing restores the sample catalog and clears sales and customer details.
+- Checkout simulates Cash, Card, and UPI payments; no payment is processed.
+- The display theme preference is saved locally in the browser.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Edit `src/data/products.js` to change the initial catalog.
 
-## React Compiler
+## Validation and build
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```sh
+npm run lint
+npm run build
+npm run preview
+```
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The production files are generated in `dist/`. Configure your static host to serve
+`index.html` for application routes such as `/inventory`.

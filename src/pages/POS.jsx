@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import { Search, Filter, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, CheckCircle, Printer, ShoppingCart } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { filterProducts } from '../data/products';
+import { Search, Filter, Plus, Minus, Trash2, CheckCircle, Printer, ShoppingCart } from 'lucide-react';
 
-export default function POS() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+export default function POS({ products, setProducts }) {
+  const categories = ['All', ...new Set(products.map(product => product.category))];
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(1001);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -21,38 +20,7 @@ export default function POS() {
   const [dpdpConsent, setDpdpConsent] = useState(false);
   const printRef = useRef(null);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      // Small limit to keep simple for now, would typically handle pagination
-      const res = await axios.get(`http://localhost:5000/api/products?search=${search}&category=${category}&limit=50`);
-      setProducts(res.data.products);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await axios.get('http://localhost:5000/api/categories');
-      setCategories(['All', ...res.data]);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search, category]);
+  const filteredProducts = filterProducts(products, search, category);
 
   const addToCart = (product) => {
     const existing = cart.find(item => item.product === product._id);
@@ -108,32 +76,35 @@ export default function POS() {
 
   const [checkoutError, setCheckoutError] = useState('');
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     setCheckoutError('');
-    try {
-      const saleData = {
-        items: cart,
-        subtotal: cartSubtotal,
-        discount: 0,
-        total: cartTotal,
-        paymentMethod,
-        customerName,
-        customerPhone
-      };
-      const res = await axios.post('http://localhost:5000/api/sales', saleData);
-      setLastSale(res.data);
-      setCart([]);
-      setCustomerName('');
-      setCustomerPhone('');
-      setAmountReceived('');
-      setDpdpConsent(false);
-      setShowCheckout(false);
-      setShowSuccess(true);
-      fetchProducts(); // refresh stock
-    } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'Unknown error';
-      setCheckoutError(msg);
+    if (!cart.length) return;
+    if (paymentMethod === 'Cash' && (!Number.isFinite(Number(amountReceived)) || Number(amountReceived) < cartTotal)) {
+      setCheckoutError('Enter enough cash to cover the total.');
+      return;
     }
+    setLastSale({
+      _id: crypto.randomUUID(),
+      items: cart,
+      subtotal: cartSubtotal,
+      discount: 0,
+      total: cartTotal,
+      paymentMethod,
+      customerName: dpdpConsent ? customerName : '',
+      customerPhone: dpdpConsent ? customerPhone : '',
+    });
+    setProducts(current => current.map(product => {
+      const item = cart.find(entry => entry.product === product._id);
+      return item ? { ...product, stock: product.stock - item.quantity } : product;
+    }));
+    setCart([]);
+    setOrderNumber(current => current + 1);
+    setCustomerName('');
+    setCustomerPhone('');
+    setAmountReceived('');
+    setDpdpConsent(false);
+    setShowCheckout(false);
+    setShowSuccess(true);
   };
 
   const printReceipt = () => {
@@ -174,13 +145,8 @@ export default function POS() {
         </header>
 
         <div className="content-area">
-          {loading ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="loader"></div>
-            </div>
-          ) : (
             <div className="product-grid">
-              {products.map(p => (
+              {filteredProducts.map(p => (
                 <div key={p._id} className="product-card" onClick={() => addToCart(p)}>
                   <span className="product-category-tag">{p.category}</span>
                   <h3 className="product-name">{p.name}</h3>
@@ -192,9 +158,8 @@ export default function POS() {
                   </div>
                 </div>
               ))}
-              {products.length === 0 && <p className="text-muted">No products found.</p>}
+              {filteredProducts.length === 0 && <p className="text-muted">No products found.</p>}
             </div>
-          )}
         </div>
       </div>
 
@@ -202,7 +167,7 @@ export default function POS() {
       <div className="cart-panel">
         <div className="cart-header">
           <h2 style={{ margin: 0 }}>Current Order</h2>
-          <p className="text-muted text-sm">Order #{Math.floor(Math.random() * 10000)}</p>
+          <p className="text-muted text-sm">Order #{orderNumber}</p>
         </div>
 
         <div className="cart-items">
@@ -322,14 +287,12 @@ export default function POS() {
                   <div className="dpdp-shield">🛡️</div>
                   <div>
                     <h4 className="dpdp-title">Data Collection Notice</h4>
-                    <p className="dpdp-act-tag">India's Digital Personal Data Protection Act, 2023</p>
+                    <p className="dpdp-act-tag">Static demo</p>
                   </div>
                 </div>
                 <p className="dpdp-body">
-                  We are collecting your <strong>name</strong> and <strong>mobile number</strong> for billing, warranty, and
-                  after-sale support <em>only</em>. Your data will <strong>not</strong> be sold or shared with any third party.
-                  Under the DPDP Act 2023, you have the right to <strong>access, correct, or erase</strong> your personal data
-                  at any time by contacting the store.
+                  Optional customer details are used only for this demo sale. They stay in memory
+                  and are cleared when you refresh the page.
                 </p>
                 <label className="dpdp-consent-row">
                   <input
@@ -464,8 +427,8 @@ export default function POS() {
             <div className="flex justify-center mb-4">
               <CheckCircle size={64} color="var(--accent-success)" />
             </div>
-            <h2>Payment Successful!</h2>
-            <p className="text-muted mb-6">Transaction completed via {lastSale?.paymentMethod}</p>
+            <h2>Demo Sale Complete!</h2>
+            <p className="text-muted mb-6">Simulated payment via {lastSale?.paymentMethod}</p>
 
             <div className="flex gap-4">
               <button className="btn btn-outline" style={{ flex: 1 }} onClick={printReceipt}>
@@ -483,7 +446,7 @@ export default function POS() {
                   <h2>QuickPOS Supermarket</h2>
                   <p>123 Main Street, City</p>
                   <p>Date: {new Date().toLocaleString()}</p>
-                  <p>Receipt #{lastSale?._id.substring(18)}</p>
+                  <p>Receipt #{lastSale?._id.slice(-8)}</p>
                 </div>
                 <div>
                   {lastSale?.items.map(item => (

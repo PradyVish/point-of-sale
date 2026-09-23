@@ -3,8 +3,10 @@ import { Routes, Route, NavLink } from 'react-router-dom';
 import { ShoppingCart, PackageSearch, LayoutDashboard } from 'lucide-react';
 import POS from './pages/POS';
 import Inventory from './pages/Inventory';
+import { initialProducts } from './data/products';
 
 function App() {
+  const [products, setProducts] = useState(initialProducts);
   const [isDark, setIsDark] = useState(() => {
     // Persist preference across reloads
     const saved = localStorage.getItem('pos-theme');
@@ -56,6 +58,7 @@ function App() {
         </label>
 
         <div style={{ marginTop: '0.75rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p>Demo data ? resets on refresh</p>
           <p>Cashier: <b>Admin</b></p>
           <p>{new Date().toLocaleDateString()}</p>
         </div>
@@ -63,8 +66,8 @@ function App() {
 
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<POS />} />
-          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/" element={<POS products={products} setProducts={setProducts} />} />
+          <Route path="/inventory" element={<Inventory products={products} setProducts={setProducts} />} />
         </Routes>
       </main>
     </div>
